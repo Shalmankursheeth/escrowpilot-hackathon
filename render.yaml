@@ -1,0 +1,22 @@
+# Render blueprint: API on the free plan. Set the secret values in the Render dashboard.
+services:
+  - type: web
+    name: escrowpilot-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - { key: APP_ENV, value: demo }
+      - { key: SECRET_KEY, generateValue: true }
+      - { key: ADMIN_EMAIL, sync: false }
+      - { key: DATABASE_URL, sync: false }      # Neon connection string, starts with postgresql+psycopg://
+      - { key: CORS_ORIGINS, sync: false }      # your Vercel URL, e.g. https://escrowpilot.vercel.app
+      - { key: PUBLIC_APP_URL, sync: false }    # same Vercel URL
+      - { key: PAYPAL_MODE, value: mock }       # change to sandbox after the smoke test passes
+      - { key: PAYPAL_CLIENT_ID, sync: false }
+      - { key: PAYPAL_CLIENT_SECRET, sync: false }
+      - { key: PAYPAL_WEBHOOK_ID, sync: false }
+      - { key: AI_PROVIDER, value: offline }    # change to gemini after the smoke test passes
+      - { key: GEMINI_API_KEY, sync: false }

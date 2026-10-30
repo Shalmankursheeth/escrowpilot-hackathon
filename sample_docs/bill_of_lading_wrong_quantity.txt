@@ -1,0 +1,6 @@
+BILL OF LADING
+Document Number: BL-778813
+Shipper: Kaveri Exports
+Consignee: Nordic Home Imports
+Goods: 800 units of granite countertop slabs
+Quantity: 800
