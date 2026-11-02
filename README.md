@@ -45,10 +45,10 @@ Demo walk-through: register an admin (the ADMIN_EMAIL address), a seller and a b
 - `scripts/live_smoke.py` checks your Gemini and PayPal sandbox keys. `DEPLOY.md` has the free-tier deploy steps. `docs/` has the demo script and Devpost story.
 
 ## Turn on Gemini (free tier)
-Get a key at Google AI Studio, then set `AI_PROVIDER=gemini` and `GEMINI_API_KEY=...`. If Gemini fails, it falls back to the offline rules. *The Gemini client is not tested live in this repo yet.*
+Get a key at Google AI Studio, then set `AI_PROVIDER=gemini` and `GEMINI_API_KEY=...`. If Gemini fails, it falls back to the offline rules. *Verified live against the Gemini API with `scripts/live_smoke.py`.*
 
 ## Turn on PayPal sandbox
-Create a sandbox app at developer.paypal.com, then set `PAYPAL_MODE=sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and a webhook id pointing at `/webhooks/paypal`. Payouts must be enabled for the sandbox app. Seller accounts need a `paypal_email` that is a sandbox account. *The PayPal client is not tested live yet; run one funding and one payout before relying on it.*
+Create a sandbox app at developer.paypal.com, then set `PAYPAL_MODE=sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and a webhook id pointing at `/webhooks/paypal`. Payouts must be enabled for the sandbox app. Seller accounts need a `paypal_email` that is a sandbox account. *Verified live in the PayPal sandbox (funding, capture, payout and webhook) with `scripts/live_smoke.py`: 11 of 11 checks passed.*
 
 ## Security notes
 - Secrets only from environment variables; `.env` is git-ignored.
