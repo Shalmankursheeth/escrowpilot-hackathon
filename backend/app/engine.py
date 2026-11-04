@@ -437,14 +437,18 @@ def rule_dispute(db: Session, holder: FundsHolder, deal: Deal, ms: Milestone, fa
         forfeit_deposit(db, holder, deal, actor)
     else:
         deal.fault = "buyer"
+        whole = deal.failure_scope == "whole_order"
         if goods_back(deal, ms):
             refund_milestone(db, holder, deal, ms, actor, note or "buyer at fault", pct=100 - PENALTY_PCT,
                              needs_proof=False, kept_seller_pct=VICTIM_PCT)
-            settle_held(db, holder, deal, actor)
+            if whole:  # the goods came back, so the ruling covers everything held for them
+                wind_down_after_buyer_fault(db, holder, deal, ms, actor, note, goods_returned=True)
+            else:
+                settle_held(db, holder, deal, actor)
         else:
             accept_or_release(db, holder, deal, ms, actor, f"buyer at fault, goods kept: {note}")
-        if deal.failure_scope == "whole_order":
-            wind_down_after_buyer_fault(db, holder, deal, ms, actor, note)
+            if whole:
+                wind_down_after_buyer_fault(db, holder, deal, ms, actor, note, goods_returned=False)
     if deal.failure_scope == "whole_order":
         announce_combined_refund(db, deal, actor)
     add_audit(db, deal.id, actor, "fault_ruled", {"milestone": ms.id, "fault": fault, "note": note})
@@ -460,14 +464,19 @@ def announce_combined_refund(db: Session, deal: Deal, actor: str) -> None:
     notify_deal(db, deal, f"The buyer is refunded {total / 100:,.2f} {deal.currency} in total across {len(refunds)} stages.")
 
 
-def wind_down_after_buyer_fault(db: Session, holder: FundsHolder, deal: Deal, ruled: Milestone, actor: str, note: str) -> None:
-    """Signed scope 'whole_order' and the buyer was at fault: the order ends here. Stages the seller already delivered are paid
-    (minus the fee); stages the buyer funded but the seller has not delivered go back to the buyer in full; stages never funded
-    are cancelled. Only the disputed stage carries the 5% penalty."""
+def wind_down_after_buyer_fault(db: Session, holder: FundsHolder, deal: Deal, ruled: Milestone, actor: str, note: str,
+                                goods_returned: bool = True) -> None:
+    """Signed scope 'whole_order' and the buyer was at fault: the order ends here.
+    Goods returned: the ruling covers the full amount held. Every held stage (delivered or not) is refunded minus 5%, of which the
+    seller gets 2% and the platform 3%, exactly like the disputed stage. Stages never funded are cancelled.
+    Goods kept: delivered stages are paid (minus the fee) and funded, undelivered stages go back to the buyer in full."""
     for m in deal.milestones:
         if m.id == ruled.id:
             continue
-        if m.state == "accepted":
+        if goods_returned and (m.state == "accepted" or (m.state in ("waiting", "approved_hold", "flagged") and m.funded)):
+            refund_milestone(db, holder, deal, m, actor, f"order ended, buyer at fault: {note}", pct=100 - PENALTY_PCT,
+                             needs_proof=False, kept_seller_pct=VICTIM_PCT)
+        elif m.state == "accepted":
             release_milestone(db, holder, deal, m, actor, f"order ended, buyer at fault: {note}")
         elif m.state in ("waiting", "approved_hold", "flagged"):
             if m.funded:

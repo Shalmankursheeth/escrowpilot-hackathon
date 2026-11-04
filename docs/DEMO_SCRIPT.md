@@ -16,12 +16,12 @@
 - The buyer pays each stage into escrow. The seller pays a refundable **5% security deposit** first. In the demo the platform's PayPal account holds both; in production a licensed partner does.
 - Good order: the seller is paid minus a **2% fee**, the deposit comes back, the buyer pays no fee.
 - **Seller at fault:** buyer fully refunded plus 2% of the order from the seller's deposit; the platform keeps 3%. With whole-order scope, every funded stage goes back to the buyer as one combined refund.
-- **Buyer at fault, goods returned:** buyer refunded minus 5% of that stage; seller gets 2%, platform 3%, deposit returns. With whole-order scope, delivered stages are paid and funded, undelivered stages go back in full.
+- **Buyer at fault, goods returned:** the dispute is on the full amount held: the buyer is refunded minus 5%, the seller gets 2%, the platform 3%, and the deposit returns. With scope "this stage only", only the disputed stage is settled this way. If the buyer keeps the goods, delivered stages are paid (minus the fee) and funded, undelivered stages go back in full.
 - **No refund before the seller checks the returned goods** (5 days, no answer counts as confirmed).
 - The reviewer chooses **Refund this stage** or **Full return, whole order** (default: what both signed; a change is logged). The reviewer names the fault, the ruling waits **48 hours**, one **appeal** goes to a different reviewer and that decision is final.
 
 ## Shot list
-Order B numbers: the two delivered stages are paid ($3,000 and $4,000 minus the 2% fee = $2,940 and $3,920). The disputed $3,000 stage: buyer $2,850 back, seller $60, platform $90. Platform earns $230 in total, and the $500 deposit returns to the seller. If the first ruling (seller at fault) were final instead, the buyer would get all $10,000 back as one combined refund.
+The dispute is always on the **full amount held** (goods came back, so every held stage is covered). Order B numbers on $10,000 held: buyer refunded $9,500, seller $200 (2%), platform $300 (3%), and the $500 deposit returns to the seller. The buyer sees it as one combined refund (PayPal sends one refund per stage payment: $2,850, $3,800 and $2,850). If the first ruling (seller at fault) were final instead, the buyer would get all $10,000 back, again as one combined refund.
 
 | Time | On screen | Say |
 |---|---|---|
@@ -33,7 +33,7 @@ Order B numbers: the two delivered stages are paid ($3,000 and $4,000 minus the 
 | 1:10 | Show the scope switch (**Refund this stage** or **Full return, whole order**), tap **Seller at fault**, show the 48-hour banner | "The reviewer picks how far the ruling goes, and names the fault. Nothing moves for 48 hours." |
 | 1:25 | Seller view: type a reason, **Appeal once** | "The seller appeals, once." |
 | 1:35 | Second reviewer: **Buyer at fault** | "A different reviewer decides, and that is final. They overturn it." |
-| 1:45 | Deal screen, then the **Money** tab (PayPal refund and payout in the log, platform earned, "Deposit returned") | "The two stages already delivered are paid. Only the disputed stage carries the penalty: the buyer is refunded minus five percent, the seller keeps two, the platform three. The deposit comes straight back. Every number was signed in advance." |
+| 1:45 | Deal screen, then the **Money** tab (PayPal refund and payout in the log, platform earned, "Deposit returned") | "A dispute covers everything held. The goods came back, so the buyer is refunded the whole amount minus five percent. The seller keeps two, the platform three, and the deposit comes straight back. Every number was signed in advance." |
 | 2:15 | Audit trail **Show**, "Chain intact" | "Every step is in a tamper-evident log, and every payout has an idempotency key, so nothing is paid twice." |
 | 2:25 | Closing card | "EscrowPilot: PayPal moves the money, Gemini reads the paperwork, fair rules decide. Sandbox today. Next, a licensed partner for live funds." |
 

@@ -106,12 +106,12 @@ def test_buyer_at_fault_goods_returned_costs_five_percent(client, world):
     assert rule(client, world, deal, ms, "buyer_fault").status_code == 200
     d = client.get(f"/deals/{deal['id']}", headers=world["buyer"]).json()
     h = payments.get_holder()
-    last = 1_500_000
+    first, second, last = 1_500_000, 2_000_000, 1_500_000
     assert d["state"] == "completed" and d["deposit"]["state"] == "returned"
-    assert sorted(r["amount_cents"] for r in h.refunds) == sorted([last * 95 // 100, DEPOSIT])
+    # the goods came back, so the ruling covers the full amount held: every stage is refunded minus 5%
+    assert sorted(r["amount_cents"] for r in h.refunds) == sorted([first * 95 // 100, second * 95 // 100, last * 95 // 100, DEPOSIT])
     pays = sorted(p["amount_cents"] for p in h.payouts)
-    # the two earlier stages are paid minus the 2% fee; the seller also gets 2% of the disputed stage
-    assert pays == sorted([1_500_000 - 30_000, 2_000_000 - 40_000, last * 2 // 100])
+    assert pays == sorted([first * 2 // 100, second * 2 // 100, last * 2 // 100])  # the seller's 2% of each; the platform keeps 3%
 
 
 def test_buyer_at_fault_but_keeps_goods_seller_is_paid_in_full(client, world):
@@ -143,9 +143,9 @@ def test_buyer_at_fault_on_a_whole_order_ends_the_order_fairly(client, world):
     assert states == ["refunded", "refunded", "cancelled"] and d["state"] == "completed"
     assert d["deposit"]["state"] == "returned"
     first, second = 1_500_000, 2_000_000
-    # stage 1: 95% back; stage 2 (funded, undelivered): all back; plus the deposit
-    assert sorted(r["amount_cents"] for r in h.refunds) == sorted([first * 95 // 100, second, DEPOSIT])
-    assert sum(p["amount_cents"] for p in h.payouts) == first * 2 // 100  # the seller gets only the 2% penalty share
+    # goods back, so everything held is refunded minus 5% (the disputed stage and the funded, undelivered one), plus the deposit
+    assert sorted(r["amount_cents"] for r in h.refunds) == sorted([first * 95 // 100, second * 95 // 100, DEPOSIT])
+    assert sorted(p["amount_cents"] for p in h.payouts) == sorted([first * 2 // 100, second * 2 // 100])
 
 
 def test_reviewer_can_choose_stage_only_or_whole_order_and_it_is_logged(client, world):

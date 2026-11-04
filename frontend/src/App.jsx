@@ -191,7 +191,7 @@ function QueueItem({ q, review, go, reload, working }) {
             <button className="ghost small" onClick={() => checkReturn(false)}>Reviewed: mismatch stands</button></span></span></div>}
         <div className="fact"><i /><span><b>Signed scope: {q.scope === "stage" ? "this stage only" : "whole order"}.</b>{" "}
           {scope === "stage" ? "A ruling settles only this stage; the other stages carry on."
-            : q.other_locked_cents > 0 ? `A ruling also ends the order: ${money(q.other_locked_cents)} still locked in other stages is settled with it. Seller at fault: all of it goes back to the buyer. Buyer at fault: delivered stages are paid to the seller, undelivered funded stages go back to the buyer.`
+            : q.other_locked_cents > 0 ? `A ruling also ends the order: ${money(q.other_locked_cents)} still locked in other stages is settled with it. Seller at fault: all of it goes back to the buyer. Buyer at fault with the goods returned: all of it is refunded minus 5% (seller 2%, platform 3%).`
             : "A ruling ends the order. No other stage has money locked."}</span></div>
         {waiting && <div className="fact wait"><i /><span><b>Ruling: {m.ruling} at fault.</b> Takes effect {new Date(m.ruling_due_at + "Z").toLocaleString()} unless appealed.</span></div>}
         {m.appealed && <div className="fact wait"><i /><span><b>Appealed:</b> {m.appeal_reason}. A different reviewer must decide; that is final.</span></div>}
