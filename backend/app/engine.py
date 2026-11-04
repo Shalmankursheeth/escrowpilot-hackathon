@@ -443,7 +443,27 @@ def rule_dispute(db: Session, holder: FundsHolder, deal: Deal, ms: Milestone, fa
             settle_held(db, holder, deal, actor)
         else:
             accept_or_release(db, holder, deal, ms, actor, f"buyer at fault, goods kept: {note}")
+        if deal.failure_scope == "whole_order":
+            wind_down_after_buyer_fault(db, holder, deal, ms, actor, note)
     add_audit(db, deal.id, actor, "fault_ruled", {"milestone": ms.id, "fault": fault, "note": note})
+
+
+def wind_down_after_buyer_fault(db: Session, holder: FundsHolder, deal: Deal, ruled: Milestone, actor: str, note: str) -> None:
+    """Signed scope 'whole_order' and the buyer was at fault: the order ends here. Stages the seller already delivered are paid
+    (minus the fee); stages the buyer funded but the seller has not delivered go back to the buyer in full; stages never funded
+    are cancelled. Only the disputed stage carries the 5% penalty."""
+    for m in deal.milestones:
+        if m.id == ruled.id:
+            continue
+        if m.state == "accepted":
+            release_milestone(db, holder, deal, m, actor, f"order ended, buyer at fault: {note}")
+        elif m.state in ("waiting", "approved_hold", "flagged"):
+            if m.funded:
+                refund_milestone(db, holder, deal, m, actor, f"order ended, buyer at fault: {note}", pct=100, needs_proof=False)
+            else:
+                m.state = "cancelled"
+                add_audit(db, deal.id, actor, "milestone_cancelled", {"milestone": m.id, "reason": "order ended, buyer at fault"})
+    _finalize(db, holder, deal, actor)
 
 
 def precheck_ruling(deal: Deal, ms: Milestone, fault: str) -> None:

@@ -124,3 +124,25 @@ def test_buyer_at_fault_but_keeps_goods_seller_is_paid_in_full(client, world):
     assert d["state"] == "completed" and d["deposit"]["state"] == "returned"
     assert [r["amount_cents"] for r in h.refunds] == [DEPOSIT]
     assert sum(p["amount_cents"] for p in h.payouts) == 5_000_000 - 100_000
+
+
+def test_buyer_at_fault_on_a_whole_order_ends_the_order_fairly(client, world):
+    """Stage 1 delivered and disputed, stage 2 funded but not delivered, stage 3 never funded."""
+    deal = live_deal(client, world)
+    proof(client, world, deal, 0, "order_confirmation.txt")
+    ms1 = deal["milestones"][1]
+    client.post(f"/deals/{deal['id']}/milestones/{ms1['id']}/fund", headers=world["buyer"])
+    assert client.post(f"/deals/{deal['id']}/milestones/{ms1['id']}/fund/capture", headers=world["buyer"]).status_code == 200
+    ms0 = deal["milestones"][0]
+    dispute(client, world, deal, ms0)
+    send_return(client, world, deal, ms0)
+    assert rule(client, world, deal, ms0, "buyer_fault").status_code == 200
+    d = client.get(f"/deals/{deal['id']}", headers=world["buyer"]).json()
+    h = payments.get_holder()
+    states = [m["state"] for m in d["milestones"]]
+    assert states == ["refunded", "refunded", "cancelled"] and d["state"] == "completed"
+    assert d["deposit"]["state"] == "returned"
+    first, second = 1_500_000, 2_000_000
+    # stage 1: 95% back; stage 2 (funded, undelivered): all back; plus the deposit
+    assert sorted(r["amount_cents"] for r in h.refunds) == sorted([first * 95 // 100, second, DEPOSIT])
+    assert sum(p["amount_cents"] for p in h.payouts) == first * 2 // 100  # the seller gets only the 2% penalty share

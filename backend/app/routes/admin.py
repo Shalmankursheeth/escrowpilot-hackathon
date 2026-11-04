@@ -38,7 +38,10 @@ def verify_user(user_id: int, admin: User = Depends(admin_only), db: Session = D
 @router.get("/queue")
 def review_queue(_a: User = Depends(admin_only), db: Session = Depends(get_db)):
     rows = db.scalars(select(Milestone).where(Milestone.state == "flagged").order_by(Milestone.id)).all()
-    return [{"deal_id": m.deal_id, "deal_title": m.deal.title, "milestone": milestone_dict(m)} for m in rows]
+    def other_locked(m: Milestone) -> int:
+        return sum(o.amount_cents for o in m.deal.milestones if o.id != m.id and o.funded and o.state in ("waiting", "approved_hold", "flagged", "accepted"))
+    return [{"deal_id": m.deal_id, "deal_title": m.deal.title, "milestone": milestone_dict(m),
+             "scope": m.deal.failure_scope, "other_locked_cents": other_locked(m)} for m in rows]
 
 
 @router.get("/ledger")
