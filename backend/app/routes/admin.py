@@ -64,6 +64,15 @@ def ledger(_a: User = Depends(admin_only), db: Session = Depends(get_db)):
     rows = [{"id": e.id, "deal": deals.get(e.deal_id, "-"), "stage": ms_names.get(e.milestone_id),
              "label": labels.get(e.kind, e.kind), "kind": e.kind, "amount_cents": e.amount_cents,
              "status": e.status, "at": e.created_at.isoformat()} for e in events]
+    by_deal: dict[int, list[PaymentEvent]] = {}
+    for e in events:
+        if e.kind == "refund":
+            by_deal.setdefault(e.deal_id, []).append(e)
+    for deal_id, group in by_deal.items():
+        if len(group) > 1:  # PayPal refunds each payment separately; show the buyer's side as one combined total
+            rows.insert(0, {"id": -deal_id, "deal": deals.get(deal_id, "-"), "stage": f"{len(group)} stages",
+                            "label": "Combined refund to buyer", "kind": "refund", "amount_cents": sum(g.amount_cents for g in group),
+                            "status": "combined", "at": max(g.created_at for g in group).isoformat(), "combined": True})
     fee_rows = [{"deal": deals.get(m.deal_id, "-"), "stage": m.name, "fee_cents": m.fee_cents, "state": m.state}
                 for m in db.scalars(select(Milestone).where(Milestone.fee_cents > 0)).all()]
     return {

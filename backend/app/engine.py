@@ -445,7 +445,19 @@ def rule_dispute(db: Session, holder: FundsHolder, deal: Deal, ms: Milestone, fa
             accept_or_release(db, holder, deal, ms, actor, f"buyer at fault, goods kept: {note}")
         if deal.failure_scope == "whole_order":
             wind_down_after_buyer_fault(db, holder, deal, ms, actor, note)
+    if deal.failure_scope == "whole_order":
+        announce_combined_refund(db, deal, actor)
     add_audit(db, deal.id, actor, "fault_ruled", {"milestone": ms.id, "fault": fault, "note": note})
+
+
+def announce_combined_refund(db: Session, deal: Deal, actor: str) -> None:
+    """PayPal refunds one payment at a time. When an order unwinds across several stages, say it once as a single total."""
+    refunds = db.scalars(select(PaymentEvent).where(PaymentEvent.deal_id == deal.id, PaymentEvent.kind == "refund")).all()
+    if len(refunds) < 2:
+        return
+    total = sum(r.amount_cents for r in refunds)
+    add_audit(db, deal.id, actor, "combined_refund", {"stages": len(refunds), "refund_cents": total})
+    notify_deal(db, deal, f"The buyer is refunded {total / 100:,.2f} {deal.currency} in total across {len(refunds)} stages.")
 
 
 def wind_down_after_buyer_fault(db: Session, holder: FundsHolder, deal: Deal, ruled: Milestone, actor: str, note: str) -> None:

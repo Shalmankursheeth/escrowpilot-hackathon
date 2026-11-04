@@ -165,3 +165,19 @@ def test_reviewer_can_choose_stage_only_or_whole_order_and_it_is_logged(client, 
     assert d["failure_scope"] == "stage" and d["state"] == "funded"  # only the disputed stage settled, the order goes on
     log = client.get(f"/deals/{deal['id']}/audit", headers=world["buyer"]).json()
     assert any(e["action"] == "scope_chosen" for e in log["events"]) and log["chain_ok"] is True
+
+
+def test_whole_order_seller_fault_is_reported_as_one_combined_refund(client, world):
+    deal = live_deal(client, world)
+    ms = to_last_stage(client, world, deal)
+    dispute(client, world, deal, ms)
+    send_return(client, world, deal, ms)
+    assert rule(client, world, deal, ms, "seller_fault").status_code == 200
+    log = client.get(f"/deals/{deal['id']}/audit", headers=world["buyer"]).json()
+    combined = [e for e in log["events"] if e["action"] == "combined_refund"]
+    assert len(combined) == 1 and combined[0]["detail"]["refund_cents"] == 5_000_000 and combined[0]["detail"]["stages"] == 3
+    assert log["chain_ok"] is True
+    led = client.get("/admin/ledger", headers=world["admin"]).json()
+    row = [e for e in led["events"] if e.get("combined")]
+    assert len(row) == 1 and row[0]["amount_cents"] == 5_000_000
+    assert led["refunded_cents"] == 5_000_000  # the combined row is a summary, never double counted
