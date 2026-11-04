@@ -131,3 +131,5 @@ class ReturnCheckIn(BaseModel):
 class ReviewIn(BaseModel):
     decision: Literal["approve", "refund", "seller_fault", "buyer_fault"]
     note: str = Field(default="", max_length=1000)
+    # The reviewer may settle just this stage or the whole order; unset keeps the scope both sides signed.
+    scope: Literal["stage", "whole_order"] | None = None

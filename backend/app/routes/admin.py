@@ -91,7 +91,10 @@ def review(
         raise HTTPException(status_code=409, detail="A ruling is already waiting out its cooling-off. It can be appealed once.")
     if appealed and admin.email == ms.ruling_by:
         raise HTTPException(status_code=409, detail="A different reviewer must decide the appeal")
-    add_audit(db, deal.id, admin.email, "admin_review", {"milestone": ms.id, "decision": body.decision, "note": body.note})
+    if body.scope and body.decision in ("seller_fault", "buyer_fault") and body.scope != deal.failure_scope:
+        add_audit(db, deal.id, admin.email, "scope_chosen", {"milestone": ms.id, "from": deal.failure_scope, "to": body.scope})
+        deal.failure_scope = body.scope
+    add_audit(db, deal.id, admin.email, "admin_review", {"milestone": ms.id, "decision": body.decision, "note": body.note, "scope": deal.failure_scope})
     try:
         if body.decision in ("seller_fault", "buyer_fault") and not appealed:
             engine.propose_ruling(db, holder, deal, ms, body.decision.split("_")[0], admin.email, body.note)

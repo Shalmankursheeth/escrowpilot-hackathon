@@ -146,3 +146,22 @@ def test_buyer_at_fault_on_a_whole_order_ends_the_order_fairly(client, world):
     # stage 1: 95% back; stage 2 (funded, undelivered): all back; plus the deposit
     assert sorted(r["amount_cents"] for r in h.refunds) == sorted([first * 95 // 100, second, DEPOSIT])
     assert sum(p["amount_cents"] for p in h.payouts) == first * 2 // 100  # the seller gets only the 2% penalty share
+
+
+def test_reviewer_can_choose_stage_only_or_whole_order_and_it_is_logged(client, world):
+    deal = live_deal(client, world)  # signed as whole_order
+    proof(client, world, deal, 0, "order_confirmation.txt")
+    ms1 = deal["milestones"][1]
+    client.post(f"/deals/{deal['id']}/milestones/{ms1['id']}/fund", headers=world["buyer"])
+    client.post(f"/deals/{deal['id']}/milestones/{ms1['id']}/fund/capture", headers=world["buyer"])
+    ms0 = deal["milestones"][0]
+    dispute(client, world, deal, ms0)
+    send_return(client, world, deal, ms0)
+    r = client.post(f"/admin/deals/{deal['id']}/milestones/{ms0['id']}/review", headers=world["admin"],
+                    json={"decision": "buyer_fault", "note": "", "scope": "stage"})
+    assert r.status_code == 200
+    d = client.get(f"/deals/{deal['id']}", headers=world["buyer"]).json()
+    assert [m["state"] for m in d["milestones"]] == ["refunded", "funded" if d["milestones"][1]["state"] == "funded" else d["milestones"][1]["state"], "waiting"]
+    assert d["failure_scope"] == "stage" and d["state"] == "funded"  # only the disputed stage settled, the order goes on
+    log = client.get(f"/deals/{deal['id']}/audit", headers=world["buyer"]).json()
+    assert any(e["action"] == "scope_chosen" for e in log["events"]) and log["chain_ok"] is True

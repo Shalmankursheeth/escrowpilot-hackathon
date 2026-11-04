@@ -166,6 +166,7 @@ function QueueItem({ q, review, go, reload, working }) {
   const m = q.milestone;
   const waiting = m.ruling && m.ruling_due_at && !m.appealed;
   const lock = waiting || working;
+  const [scope, setScope] = useState(q.scope);
   const load = async () => { setBusy(true); try { setBrief(await api(`/admin/deals/${q.deal_id}/milestones/${m.id}/brief`)); } finally { setBusy(false); } };
   const checkReturn = async (ok) => {
     try { await api(`/admin/deals/${q.deal_id}/milestones/${m.id}/return-check`, "POST", { ok, note: ok ? "Reviewer checked the evidence: goods match" : "Reviewer checked the evidence: mismatch confirmed" }); toast("Return check recorded"); reload(); }
@@ -176,6 +177,11 @@ function QueueItem({ q, review, go, reload, working }) {
       <div className="qhead">
         <div className="grow"><div className="qtitle">{q.deal_title}</div><div className="muted">Stage {m.seq}: {m.name} · order #{q.deal_id}</div></div>
         <div className="qamt">{money(m.amount_cents)}<small>held in escrow</small></div></div>
+      <div className="scopebar"><span className="muted">If a fault is ruled, settle:</span>
+        <div className="seg">
+          <button className={"segb" + (scope === "stage" ? " on" : "")} onClick={() => setScope("stage")}>Refund this stage</button>
+          <button className={"segb" + (scope === "whole_order" ? " on" : "")} onClick={() => setScope("whole_order")}>Full return, whole order</button></div>
+        {scope !== q.scope && <span className="muted">Differs from the signed terms; the change is logged.</span>}</div>
       <div className="qfacts">
         {m.verdict?.reasons.map((r, i) => <div key={i} className={"fact " + (/^All checks passed/.test(r) ? "good" : "alert")}><i />{r}</div>)}
         {m.return_proof_ok && <div className="fact good"><i />Return proof on file{m.return_received === "confirmed" ? ", seller confirmed the returned goods" : m.return_received === null ? ", seller still checking the returned goods" : ""}</div>}
@@ -184,7 +190,7 @@ function QueueItem({ q, review, go, reload, working }) {
             <button className="ghost small" onClick={() => checkReturn(true)}>Reviewed: goods match</button>
             <button className="ghost small" onClick={() => checkReturn(false)}>Reviewed: mismatch stands</button></span></span></div>}
         <div className="fact"><i /><span><b>Signed scope: {q.scope === "stage" ? "this stage only" : "whole order"}.</b>{" "}
-          {q.scope === "stage" ? "A ruling settles only this stage; the other stages carry on."
+          {scope === "stage" ? "A ruling settles only this stage; the other stages carry on."
             : q.other_locked_cents > 0 ? `A ruling also ends the order: ${money(q.other_locked_cents)} still locked in other stages is settled with it. Seller at fault: all of it goes back to the buyer. Buyer at fault: delivered stages are paid to the seller, undelivered funded stages go back to the buyer.`
             : "A ruling ends the order. No other stage has money locked."}</span></div>
         {waiting && <div className="fact wait"><i /><span><b>Ruling: {m.ruling} at fault.</b> Takes effect {new Date(m.ruling_due_at + "Z").toLocaleString()} unless appealed.</span></div>}
@@ -197,8 +203,8 @@ function QueueItem({ q, review, go, reload, working }) {
         <button className="ghost" onClick={() => go("deal", q.deal_id)}>Open deal</button>
         <span className="grow" />
         <button disabled={lock} onClick={() => review(q, "approve")}>{working && <span className="spin" />}Approve payout</button>
-        <button className="bad" disabled={lock} onClick={() => review(q, "seller_fault")}>Seller at fault</button>
-        <button className="bad" disabled={lock} onClick={() => review(q, "buyer_fault")}>Buyer at fault</button></div></div>
+        <button className="bad" disabled={lock} onClick={() => review(q, "seller_fault", scope)}>Seller at fault</button>
+        <button className="bad" disabled={lock} onClick={() => review(q, "buyer_fault", scope)}>Buyer at fault</button></div></div>
   );
 }
 
@@ -245,11 +251,11 @@ function Admin({ go }) {
   const load = () => { api("/admin/users").then(setUsers); api("/admin/queue").then(setQueue); };
   useEffect(() => { load(); }, []);
   // One decision at a time: while a ruling is being sent every action button is locked, so a double tap cannot fire twice.
-  const review = (q, decision) => {
+  const review = (q, decision, scope) => {
     if (working) return;
     setWorking(true);
     return run(async () => {
-      await api(`/admin/deals/${q.deal_id}/milestones/${q.milestone.id}/review`, "POST", { decision, note: decision === "approve" ? "Reviewed and approved" : "" }); load();
+      await api(`/admin/deals/${q.deal_id}/milestones/${q.milestone.id}/review`, "POST", { decision, scope, note: decision === "approve" ? "Reviewed and approved" : "" }); load();
       toast(decision === "approve" ? "Payout approved" : "Ruling recorded");
     }).finally(() => setWorking(false));
   };
