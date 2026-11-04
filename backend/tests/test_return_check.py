@@ -95,3 +95,17 @@ def test_zero_check_days_keeps_the_old_behaviour(client, world):
     dispute(client, world, deal, ms)
     send_return(client, world, deal, ms)
     assert rule(client, world, deal, ms, "seller_fault").status_code == 200
+
+
+def test_admin_ledger_adds_up_and_the_audit_chain_survives_a_repeat_review(client, world):
+    deal, ms = returned_deal(client, world)
+    check(client, world, deal, ms, "seller", True)
+    assert rule(client, world, deal, ms, "seller_fault").status_code == 200
+    assert rule(client, world, deal, ms, "seller_fault").status_code == 409  # a second tap is refused, not re-run
+    led = client.get("/admin/ledger", headers=world["admin"]).json()
+    assert led["collected_cents"] > 0
+    assert led["held_cents"] == led["collected_cents"] - led["paid_out_cents"] - led["refunded_cents"] - led["platform_cents"]
+    assert led["platform_cents"] == led["stage_fees_cents"] + led["deposit_kept_cents"]
+    assert led["deposit_kept_cents"] > 0 and any(e["kind"] == "refund" for e in led["events"])
+    assert client.get(f"/deals/{deal['id']}/audit", headers=world["buyer"]).json()["chain_ok"] is True
+    assert client.get("/admin/ledger", headers=world["buyer"]).status_code == 403

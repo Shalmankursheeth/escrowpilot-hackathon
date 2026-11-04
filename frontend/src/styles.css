@@ -187,3 +187,25 @@ input[type=range]{accent-color:var(--brand);padding:0;border:0;background:transp
 
 details.dispute-rules{margin-top:10px}details summary{cursor:pointer;font-weight:600;color:var(--brand);list-style:none}details summary::-webkit-details-marker{display:none}
 details summary::after{content:" +";color:var(--muted)}details[open] summary::after{content:" −"}
+
+/* ---- admin console ---- */
+.tabs{display:flex;gap:6px;margin:14px 0 4px;padding:4px;background:var(--surface-2);border-radius:999px;width:fit-content;max-width:100%;overflow:auto}
+.tab{background:transparent;color:var(--muted);box-shadow:none;padding:7px 16px;font-size:13px;font-weight:600;border-radius:999px}
+.tab:hover{box-shadow:none;color:var(--ink)}.tab.on{background:var(--surface);color:var(--brand);box-shadow:var(--shadow-1)}
+.qcard{border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:var(--r);padding:16px;margin:12px 0;background:var(--surface);box-shadow:var(--shadow-1)}
+.qhead{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.qtitle{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.qamt{text-align:right;font-size:22px;font-weight:700;letter-spacing:-.03em}.qamt small{display:block;font-size:11px;font-weight:550;color:var(--muted);letter-spacing:0}
+.qfacts{margin:12px 0;display:grid;gap:6px}
+.fact{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:8px 12px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--ink)}
+.fact i{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none;background:var(--muted)}
+.fact.good{background:var(--ok-soft)}.fact.good i{background:var(--ok)}
+.fact.alert{background:var(--bad-soft)}.fact.alert i{background:var(--bad)}
+.fact.wait{background:var(--warn-soft)}.fact.wait i{background:var(--warn)}
+.qbrief{background:var(--brand-soft);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;margin:10px 0}
+.qacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.qacts .grow{flex:1 1 20px}
+.mrow{display:flex;gap:12px;align-items:center;padding:11px 0}.mrow+.mrow{border-top:1px solid var(--line)}
+.mrow .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.dot.in{background:var(--ok)}.dot.out{background:var(--brand)}.dot.back{background:var(--warn)}
+b.in{color:var(--ok)}b.out{color:var(--brand)}b.back{color:var(--warn)}
+.tile b+small{margin-top:2px}

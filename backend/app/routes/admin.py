@@ -7,7 +7,7 @@ from ..audit import add_audit
 from ..db import get_db
 from ..errors import BusinessError
 from ..ai import AIProvider, get_ai
-from ..models import Deal, Evidence, Milestone, User
+from ..models import AuditEvent, Deal, Evidence, Milestone, PaymentEvent, User
 from ..payments import FundsHolder, get_holder
 from ..schemas import ReturnCheckIn, ReviewIn
 from ..security import require_roles
@@ -41,12 +41,43 @@ def review_queue(_a: User = Depends(admin_only), db: Session = Depends(get_db)):
     return [{"deal_id": m.deal_id, "deal_title": m.deal.title, "milestone": milestone_dict(m)} for m in rows]
 
 
+@router.get("/ledger")
+def ledger(_a: User = Depends(admin_only), db: Session = Depends(get_db)):
+    """What came in, what went out, and what the platform earned. Read-only; built from the payment log."""
+    events = db.scalars(select(PaymentEvent).order_by(PaymentEvent.id.desc())).all()
+    total = lambda *kinds: sum(e.amount_cents for e in events if e.kind in kinds)
+    stage_fees = sum(m.fee_cents or 0 for m in db.scalars(select(Milestone)).all())
+    forfeits = db.scalars(select(AuditEvent).where(AuditEvent.action == "deposit_forfeited")).all()
+    deposit_kept = sum(int((f.detail or {}).get("to_platform_cents", 0)) for f in forfeits)
+    collected = total("capture", "deposit_capture")
+    paid_out = total("payout", "deposit_return")
+    refunded = total("refund")
+    platform = stage_fees + deposit_kept
+    deals = {d.id: d.title for d in db.scalars(select(Deal)).all()}
+    ms_names = {m.id: m.name for m in db.scalars(select(Milestone)).all()}
+    labels = {"deposit_order": "Seller deposit requested", "deposit_capture": "Seller deposit received",
+              "order": "Stage payment requested", "capture": "Stage payment received", "payout": "Paid out",
+              "refund": "Refunded to buyer", "deposit_return": "Deposit returned to seller"}
+    rows = [{"id": e.id, "deal": deals.get(e.deal_id, "-"), "stage": ms_names.get(e.milestone_id),
+             "label": labels.get(e.kind, e.kind), "kind": e.kind, "amount_cents": e.amount_cents,
+             "status": e.status, "at": e.created_at.isoformat()} for e in events]
+    fee_rows = [{"deal": deals.get(m.deal_id, "-"), "stage": m.name, "fee_cents": m.fee_cents, "state": m.state}
+                for m in db.scalars(select(Milestone).where(Milestone.fee_cents > 0)).all()]
+    return {
+        "collected_cents": collected, "paid_out_cents": paid_out, "refunded_cents": refunded,
+        "platform_cents": platform, "stage_fees_cents": stage_fees, "deposit_kept_cents": deposit_kept,
+        "held_cents": collected - paid_out - refunded - platform,
+        "fees": fee_rows, "events": rows,
+    }
+
+
 @router.post("/deals/{deal_id}/milestones/{ms_id}/review")
 def review(
     deal_id: int, ms_id: int, body: ReviewIn, admin: User = Depends(admin_only),
     db: Session = Depends(get_db), holder: FundsHolder = Depends(get_holder),
 ):
-    deal = db.get(Deal, deal_id)
+    # Lock the deal row first: a double tap (or a retry) waits here, then sees the finished state and is refused.
+    deal = db.get(Deal, deal_id, with_for_update=True)
     ms = db.get(Milestone, ms_id)
     if deal is None or ms is None or ms.deal_id != deal.id:
         raise HTTPException(status_code=404, detail="Milestone not found")

@@ -2,7 +2,7 @@
 import hashlib
 import json
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from . import clock
@@ -22,6 +22,10 @@ def _digest(prev: str, deal_id, actor: str, action: str, detail: dict, ts: str) 
 
 def add_audit(db: Session, deal_id: int | None, actor: str, action: str, detail: dict | None = None) -> AuditEvent:
     detail = detail or {}
+    # Two requests on the same deal must not both read the same "last" entry, or the chain forks.
+    # On Postgres a transaction-scoped advisory lock makes the second writer wait for the first to commit.
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("select pg_advisory_xact_lock(:k)"), {"k": deal_id or 0})
     last = db.scalar(
         select(AuditEvent).where(AuditEvent.deal_id == deal_id).order_by(AuditEvent.id.desc()).limit(1)
     )

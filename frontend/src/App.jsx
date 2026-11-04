@@ -160,62 +160,114 @@ function NewOrder({ me, go }) {
   );
 }
 
-function QueueItem({ q, review, go, reload }) {
+function QueueItem({ q, review, go, reload, working }) {
   const [brief, setBrief] = useState(null);
   const [busy, setBusy] = useState(false);
   const m = q.milestone;
   const waiting = m.ruling && m.ruling_due_at && !m.appealed;
+  const lock = waiting || working;
   const load = async () => { setBusy(true); try { setBrief(await api(`/admin/deals/${q.deal_id}/milestones/${m.id}/brief`)); } finally { setBusy(false); } };
   const checkReturn = async (ok) => {
     try { await api(`/admin/deals/${q.deal_id}/milestones/${m.id}/return-check`, "POST", { ok, note: ok ? "Reviewer checked the evidence: goods match" : "Reviewer checked the evidence: mismatch confirmed" }); toast("Return check recorded"); reload(); }
     catch (e) { toast(e.message || "Could not record", "bad"); }
   };
   return (
-    <div className="card flat rise" style={{ margin: "10px 0" }}>
-      <div className="row"><b className="grow">{q.deal_title}</b><span className="pill flagged">{m.name} · {money(m.amount_cents)}</span></div>
-      {m.verdict?.reasons.map((r, i) => <div key={i} className="reason">{r}</div>)}
-      {m.return_proof_ok && <div className="ok">✓ Return proof on file{m.return_received === "confirmed" ? ", seller confirmed the returned goods" : m.return_received === null ? ", seller still checking the returned goods" : ""}</div>}
-      {m.return_proof_ok && m.return_received === "mismatch" && <div className="reason"><b>Seller reports a mismatch:</b> {m.return_received_note}
-        <div className="row" style={{ marginTop: 6 }}>
-          <button className="ghost small" onClick={() => checkReturn(true)}>Reviewed: goods match</button>
-          <button className="ghost small" onClick={() => checkReturn(false)}>Reviewed: mismatch stands</button></div></div>}
-      {waiting && <div className="reason"><b>Ruling: {m.ruling} at fault.</b> Takes effect {new Date(m.ruling_due_at + "Z").toLocaleString()} unless appealed.</div>}
-      {m.appealed && <div className="reason"><b>Appealed:</b> {m.appeal_reason}. A different reviewer must decide; that is final.</div>}
-      {brief && <div className="next" style={{ display: "block" }}><b>Evidence summary</b> <span className="muted">({brief.provider}, facts only, no recommendation)</span>
-        <div style={{ marginTop: 4 }}>{brief.summary}</div></div>}
-      <div className="row" style={{ marginTop: 10 }}>
+    <div className="qcard rise">
+      <div className="qhead">
+        <div className="grow"><div className="qtitle">{q.deal_title}</div><div className="muted">Stage {m.seq}: {m.name} · order #{q.deal_id}</div></div>
+        <div className="qamt">{money(m.amount_cents)}<small>held in escrow</small></div></div>
+      <div className="qfacts">
+        {m.verdict?.reasons.map((r, i) => <div key={i} className={"fact " + (/^All checks passed/.test(r) ? "good" : "alert")}><i />{r}</div>)}
+        {m.return_proof_ok && <div className="fact good"><i />Return proof on file{m.return_received === "confirmed" ? ", seller confirmed the returned goods" : m.return_received === null ? ", seller still checking the returned goods" : ""}</div>}
+        {m.return_proof_ok && m.return_received === "mismatch" && <div className="fact alert"><i /><span><b>Seller reports a mismatch:</b> {m.return_received_note}
+          <span className="row" style={{ marginTop: 6 }}>
+            <button className="ghost small" onClick={() => checkReturn(true)}>Reviewed: goods match</button>
+            <button className="ghost small" onClick={() => checkReturn(false)}>Reviewed: mismatch stands</button></span></span></div>}
+        {waiting && <div className="fact wait"><i /><span><b>Ruling: {m.ruling} at fault.</b> Takes effect {new Date(m.ruling_due_at + "Z").toLocaleString()} unless appealed.</span></div>}
+        {m.appealed && <div className="fact wait"><i /><span><b>Appealed:</b> {m.appeal_reason}. A different reviewer must decide; that is final.</span></div>}
+      </div>
+      {brief && <div className="qbrief"><b>Evidence summary</b> <span className="muted">({brief.provider}, facts only, no recommendation)</span>
+        <div style={{ marginTop: 6 }}>{brief.summary}</div></div>}
+      <div className="qacts">
         <button className="ghost" disabled={busy} onClick={load}>{busy && <span className="spin" />}{brief ? "Refresh summary" : "AI evidence summary"}</button>
-        <button disabled={waiting} onClick={() => review(q, "approve")}>Approve payout</button>
-        <button className="bad" disabled={waiting} onClick={() => review(q, "seller_fault")}>Seller at fault</button>
-        <button className="bad" disabled={waiting} onClick={() => review(q, "buyer_fault")}>Buyer at fault</button>
-        <button className="ghost" onClick={() => go("deal", q.deal_id)}>Open deal</button></div></div>
+        <button className="ghost" onClick={() => go("deal", q.deal_id)}>Open deal</button>
+        <span className="grow" />
+        <button disabled={lock} onClick={() => review(q, "approve")}>{working && <span className="spin" />}Approve payout</button>
+        <button className="bad" disabled={lock} onClick={() => review(q, "seller_fault")}>Seller at fault</button>
+        <button className="bad" disabled={lock} onClick={() => review(q, "buyer_fault")}>Buyer at fault</button></div></div>
+  );
+}
+
+const EVENT_TONE = { capture: "in", deposit_capture: "in", payout: "out", refund: "back", deposit_return: "back" };
+const SIGN = { in: "+", out: "−", back: "−" };
+
+function Ledger() {
+  const [data, setData] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const load = () => api("/admin/ledger").then(setData).catch(() => setData({ events: [], fees: [] }));
+  useEffect(() => { load(); }, []);
+  if (!data) return <div className="card"><div className="skel" /><div className="skel" style={{ width: "70%" }} /></div>;
+  const moves = (data.events || []).filter((e) => !["order", "deposit_order"].includes(e.kind));
+  const shown = showAll ? moves : moves.slice(0, 8);
+  return (
+    <>
+      <div className="tiles">
+        <div className="tile accent"><small>Platform earned</small><b>{money(data.platform_cents || 0)}</b><small>{money(data.stage_fees_cents || 0)} stage fees · {money(data.deposit_kept_cents || 0)} from deposits</small></div>
+        <div className="tile"><small>Money in</small><b>{money(data.collected_cents || 0)}</b><small>buyer stages and seller deposits</small></div>
+        <div className="tile"><small>Held in escrow now</small><b>{money(data.held_cents || 0)}</b><small>not yet paid or refunded</small></div>
+        <div className="tile"><small>Paid to sellers</small><b>{money(data.paid_out_cents || 0)}</b><small>incl. deposits returned</small></div>
+        <div className="tile"><small>Refunded to buyers</small><b>{money(data.refunded_cents || 0)}</b><small>after rulings and returns</small></div></div>
+      <div className="card"><div className="row"><h2 className="grow">Platform fees earned</h2></div>
+        {!(data.fees || []).length && <div className="muted">No fees yet. A fee is taken when a stage is paid out or a buyer-at-fault refund settles.</div>}
+        {(data.fees || []).map((f, i) => <div className="mrow" key={i}><div className="grow"><b>{f.deal}</b><div className="muted">{f.stage} · {f.state}</div></div><b className="in">+{money(f.fee_cents)}</b></div>)}</div>
+      <div className="card"><div className="row"><h2 className="grow">Money log</h2><span className="muted">{moves.length} movements</span></div>
+        {!moves.length && <div className="muted">Nothing has moved yet.</div>}
+        {shown.map((e) => { const t = EVENT_TONE[e.kind] || "out"; return (
+          <div className="mrow" key={e.id}><span className={"dot " + t} /><div className="grow"><b>{e.label}</b>
+            <div className="muted">{e.deal}{e.stage ? ` · ${e.stage}` : ""} · {new Date(e.at + "Z").toLocaleString()}</div></div>
+            <div style={{ textAlign: "right" }}><b className={t}>{SIGN[t]}{money(e.amount_cents)}</b><div><span className="pill">{String(e.status || "").toLowerCase()}</span></div></div></div>); })}
+        {moves.length > 8 && <button className="ghost small" style={{ marginTop: 8 }} onClick={() => setShowAll(!showAll)}>{showAll ? "Show fewer" : `Show all ${moves.length}`}</button>}</div>
+    </>
   );
 }
 
 function Admin({ go }) {
   const [users, setUsers] = useState([]);
   const [queue, setQueue] = useState(null);
+  const [tab, setTab] = useState("review");
   const [msg, setMsg] = useState("");
+  const [working, setWorking] = useState(false);
   const { err, run } = useAction();
   const load = () => { api("/admin/users").then(setUsers); api("/admin/queue").then(setQueue); };
   useEffect(() => { load(); }, []);
-  const review = (q, decision) => run(async () => {
-    await api(`/admin/deals/${q.deal_id}/milestones/${q.milestone.id}/review`, "POST", { decision, note: decision === "approve" ? "Reviewed and approved" : "" }); load();
-    toast(decision === "approve" ? "Payout approved" : "Ruling recorded");
-  });
+  // One decision at a time: while a ruling is being sent every action button is locked, so a double tap cannot fire twice.
+  const review = (q, decision) => {
+    if (working) return;
+    setWorking(true);
+    return run(async () => {
+      await api(`/admin/deals/${q.deal_id}/milestones/${q.milestone.id}/review`, "POST", { decision, note: decision === "approve" ? "Reviewed and approved" : "" }); load();
+      toast(decision === "approve" ? "Payout approved" : "Ruling recorded");
+    }).finally(() => setWorking(false));
+  };
+  const waiting = queue ? queue.length : 0;
+  const tabs = [["review", "Review", waiting], ["money", "Money", 0], ["users", "Users", 0], ["tools", "Tools", 0]];
   return (
     <div className="page">
-      <div className="card"><h2>Review queue</h2>
+      <div className="greet">Admin console</div>
+      <div className="muted">Reviewers name who was at fault. The AI only summarizes facts, and code applies the numbers.</div>
+      <div className="tabs">{tabs.map(([k, name, n]) => <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>{name}{n > 0 && <span className="badge">{n}</span>}</button>)}</div>
+      {tab === "review" && <div className="card"><div className="row"><h2 className="grow">Review queue</h2><span className="muted">{waiting} waiting</span></div>
         {queue === null && <div className="skel" />}
         {queue && !queue.length && <div className="empty"><Icon name="check" size={30} /><div><b>All clear</b></div><div className="muted">Nothing is waiting for review.</div></div>}
-        {queue && queue.map((q) => <QueueItem key={q.milestone.id} q={q} review={review} go={go} reload={load} />)}
-        {err && <div className="err">{err}</div>}</div>
-      <div className="card"><h2>Users (simulated KYC)</h2>
+        {queue && queue.map((q) => <QueueItem key={q.milestone.id} q={q} review={review} go={go} reload={load} working={working} />)}
+        {err && <div className="err">{err}</div>}</div>}
+      {tab === "money" && <Ledger />}
+      {tab === "users" && <div className="card"><h2>Users (simulated KYC)</h2>
         {users.map((u) => <div className="partner" key={u.id}><Avatar name={u.company_name} />
           <div className="grow"><b>{u.company_name}</b><div className="muted">{u.email} · <code>{u.public_id}</code> · {u.role}</div></div>
-          {u.verified ? <span className="pill verified">verified</span> : <button onClick={() => run(async () => { await api(`/admin/users/${u.id}/verify`, "POST"); load(); toast("User verified"); })}>Verify</button>}</div>)}</div>
-      <div className="card"><h2>Timers</h2><p className="muted">Releases stages whose inspection window ended, and applies rulings whose cooling-off ended. Runs on the server every minute.</p>
-        <div className="row"><button onClick={() => run(async () => { const r = await api("/admin/run-timers", "POST"); setMsg(`${r.released} action(s) applied`); })}>Run now</button><span className="muted">{msg}</span></div></div>
+          {u.verified ? <span className="pill verified">verified</span> : <button onClick={() => run(async () => { await api(`/admin/users/${u.id}/verify`, "POST"); load(); toast("User verified"); })}>Verify</button>}</div>)}</div>}
+      {tab === "tools" && <div className="card"><h2>Timers</h2><p className="muted">Releases stages whose inspection window ended, and applies rulings whose cooling-off ended. Runs on the server every minute.</p>
+        <div className="row"><button onClick={() => run(async () => { const r = await api("/admin/run-timers", "POST"); setMsg(`${r.released} action(s) applied`); })}>Run now</button><span className="muted">{msg}</span></div></div>}
     </div>
   );
 }
