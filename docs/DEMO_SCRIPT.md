@@ -9,7 +9,7 @@
 - **PayPal:** log into the US sandbox buyer account in this browser first, so each approval is one click on **Pay**.
 - **Two orders** (the duplicate-file check flags the same file used in two open orders, so keep their documents different):
   - **Order A (live in the video, scenes 2 to 4):** a fresh 3-stage order with `sample_docs/pdf/order_confirmation.pdf` and the wrong-quantity bill of lading.
-  - **Order B (pre-built, scenes 5 to 7):** one stage, `All on delivery`, 10,000 USD, 5% deposit. Prepare it up to "buyer disputed, return receipt uploaded, seller confirmed the returned goods". Use `sample_docs/orderB/delivery_receipt_B.pdf` and `return_receipt_B.pdf` (new document numbers and dates). A one-stage order means the deposit returns right after the ruling.
+  - **Order B (pre-built, scenes 5 to 7):** three stages, `Standard 30 / 40 / 30`, 10,000 USD (3,000 / 4,000 / 3,000), 5% deposit, scope whole order, release on completion. Stages 1 and 2 are funded, delivered and verified (held in escrow), stage 3 is funded and disputed. Prepare it up to "buyer disputed stage 3, return receipt uploaded, seller confirmed the returned goods". Use, in order: `order_confirmation_B.pdf`, `bill_of_lading_B.pdf`, `delivery_receipt_B.pdf`, then `return_receipt_B.pdf` from `sample_docs/orderB/` (new document numbers, dates in order). Disputing the last stage completes the order, so the deposit returns right after the final ruling.
 - **Do not reuse a deal whose audit shows "Chain broken".** Always start Order A and B fresh.
 
 ## The money rules (know these cold)
@@ -20,7 +20,8 @@
 - **No refund before the seller checks the returned goods** (5 days, no answer counts as confirmed).
 - The reviewer chooses **Refund this stage** or **Full return, whole order** (default: what both signed; a change is logged). The reviewer names the fault, the ruling waits **48 hours**, one **appeal** goes to a different reviewer and that decision is final.
 
-## Shot list (Order B for the $10,000 example: buyer $9,500 back, seller $200, platform $300)
+## Shot list
+Order B numbers: the two delivered stages are paid ($3,000 and $4,000 minus the 2% fee = $2,940 and $3,920). The disputed $3,000 stage: buyer $2,850 back, seller $60, platform $90. Platform earns $230 in total, and the $500 deposit returns to the seller. If the first ruling (seller at fault) were final instead, the buyer would get all $10,000 back as one combined refund.
 
 | Time | On screen | Say |
 |---|---|---|
@@ -32,7 +33,7 @@
 | 1:10 | Show the scope switch (**Refund this stage** or **Full return, whole order**), tap **Seller at fault**, show the 48-hour banner | "The reviewer picks how far the ruling goes, and names the fault. Nothing moves for 48 hours." |
 | 1:25 | Seller view: type a reason, **Appeal once** | "The seller appeals, once." |
 | 1:35 | Second reviewer: **Buyer at fault** | "A different reviewer decides, and that is final. They overturn it." |
-| 1:45 | Deal screen, then the **Money** tab (PayPal refund and payout in the log, platform earned, "Deposit returned") | "The buyer is refunded minus five percent. The seller keeps two. The platform three. The deposit comes straight back. Every number was signed in advance." |
+| 1:45 | Deal screen, then the **Money** tab (PayPal refund and payout in the log, platform earned, "Deposit returned") | "The two stages already delivered are paid. Only the disputed stage carries the penalty: the buyer is refunded minus five percent, the seller keeps two, the platform three. The deposit comes straight back. Every number was signed in advance." |
 | 2:15 | Audit trail **Show**, "Chain intact" | "Every step is in a tamper-evident log, and every payout has an idempotency key, so nothing is paid twice." |
 | 2:25 | Closing card | "EscrowPilot: PayPal moves the money, Gemini reads the paperwork, fair rules decide. Sandbox today. Next, a licensed partner for live funds." |
 
