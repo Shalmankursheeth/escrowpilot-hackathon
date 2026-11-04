@@ -52,13 +52,26 @@ function Summary({ d }) {
 
 // One payment, start to finish: create the PayPal order, send the payer to PayPal's own page to approve, then capture.
 // With the offline mock holder there is nothing to approve, so it completes instantly.
-function usePayment({ start, capture, done }) {
+// PayPal sends the payer back to /paypal/return in the new tab; that page reads the pending payment saved here,
+// captures it, and tells this tab (through localStorage) to close the sheet.
+function usePayment({ start, capture, done, path, dealId }) {
   const [pay, setPay] = useState(null);
   const { busy, err, run } = useAction();
   const begin = () => run(async () => {
     const r = await start();
-    if (r.approve_url.startsWith("mock://")) { await capture(); done(); } else setPay(r);
+    if (r.approve_url.startsWith("mock://")) { await capture(); done(); return; }
+    try {
+      const token = new URL(r.approve_url).searchParams.get("token");
+      if (token && path) localStorage.setItem("ep_pending", JSON.stringify({ token, path, dealId }));
+    } catch { /* the manual button still works */ }
+    setPay(r);
   });
+  useEffect(() => {
+    if (!pay) return;
+    const onStorage = (e) => { if (e.key === "ep_done") { setPay(null); done(); } };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [pay]);
   const finish = () => run(async () => { await capture(); setPay(null); done(); });
   const sheet = (title, amount) => pay && (
     <Sheet title={title} onClose={() => setPay(null)}>
@@ -82,7 +95,7 @@ function Stage({ d, m, reload, current }) {
   const base = `/deals/${d.id}/milestones/${m.id}`;
   const amt = money(m.amount_cents, d.currency);
   const pay = usePayment({
-    start: () => api(base + "/fund", "POST"), capture: () => api(base + "/fund/capture", "POST"),
+    start: () => api(base + "/fund", "POST"), capture: () => api(base + "/fund/capture", "POST"), path: base + "/fund/capture", dealId: d.id,
     done: () => { celebrate(`Stage ${m.seq} funded`, `${amt} is locked in escrow`); reload(); },
   });
   const verdictToast = (r) => (r.state === "flagged" ? toast("Flagged for review: a check did not match", "bad") : toast("Verified against the signed terms"));
@@ -171,11 +184,11 @@ export default function Deal({ id, me, go }) {
   const reload = () => api("/deals/" + id).then(setD).catch(() => {});
   useEffect(() => { reload(); const t = setInterval(reload, 15000); return () => clearInterval(t); }, [id]);
   const upfront = usePayment({
-    start: () => api(`/deals/${id}/fund`, "POST"), capture: () => api(`/deals/${id}/fund/capture`, "POST"),
+    start: () => api(`/deals/${id}/fund`, "POST"), capture: () => api(`/deals/${id}/fund/capture`, "POST"), path: `/deals/${id}/fund/capture`, dealId: id,
     done: () => { celebrate("Escrow funded", "The full price is locked in escrow"); reload(); },
   });
   const deposit = usePayment({
-    start: () => api(`/deals/${id}/deposit`, "POST"), capture: () => api(`/deals/${id}/deposit/capture`, "POST"),
+    start: () => api(`/deals/${id}/deposit`, "POST"), capture: () => api(`/deals/${id}/deposit/capture`, "POST"), path: `/deals/${id}/deposit/capture`, dealId: id,
     done: () => { celebrate("Deposit held", "The buyer can now fund the order"); reload(); },
   });
   if (!d) return <div className="card"><div className="skel" style={{ height: 28, width: "50%" }} /><div className="skel" /><div className="skel" style={{ width: "70%" }} /></div>;

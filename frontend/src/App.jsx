@@ -248,8 +248,31 @@ function Home({ me, go }) {
   );
 }
 
+// PayPal lands the payer here after approval. Capture the payment saved by the sheet, tell the other tab, then open the order.
+function PayReturn({ onDone }) {
+  const [msg, setMsg] = useState("Finishing your payment…");
+  const [bad, setBad] = useState(false);
+  useEffect(() => {
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem("ep_pending") || "null"); } catch { /* none */ }
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!pending || pending.token !== token) { onDone(pending && pending.dealId); return; }
+    api(pending.path, "POST").then(() => {
+      localStorage.removeItem("ep_pending");
+      localStorage.setItem("ep_done", String(Date.now()));
+      setMsg("Payment confirmed. Opening your order…");
+      setTimeout(() => onDone(pending.dealId), 900);
+    }).catch((e) => { setBad(true); setMsg(String((e && e.message) || e)); });
+  }, []);
+  return <div className="page"><div className="card" style={{ textAlign: "center" }}>
+    <h2>{bad ? "We could not confirm the payment" : "One moment"}</h2>
+    <p className="muted">{msg}</p>
+    {bad && <button onClick={() => onDone(null)}>Back to EscrowPilot</button>}</div></div>;
+}
+
 export default function App() {
   const [me, setMe] = useState(null);
+  const [returning, setReturning] = useState(window.location.pathname === "/paypal/return");
   const [ready, setReady] = useState(!hasToken());
   const hashDeal = /^#deal-(\d+)$/.exec(window.location.hash);
   const [view, setView] = useState(hashDeal ? { name: "deal", id: Number(hashDeal[1]) } : { name: "home" });
@@ -257,6 +280,12 @@ export default function App() {
   if (!ready) return null;
   if (!me) return <><Auth onDone={setMe} /><Overlays /></>;
   const go = (name, id) => { setView({ name, id }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const leaveReturn = (dealId) => {
+    window.history.replaceState(null, "", dealId ? `/#deal-${dealId}` : "/");
+    setReturning(false);
+    setView(dealId ? { name: "deal", id: Number(dealId) } : { name: "home" });
+  };
+  if (returning) return <><PayReturn onDone={leaveReturn} /><Overlays /></>;
   return (
     <div>
       <header><div className="brand" onClick={() => go("home")}><span className="logo"><Icon name="shield" size={18} /></span>EscrowPilot</div>
