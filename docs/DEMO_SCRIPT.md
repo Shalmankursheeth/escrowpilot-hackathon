@@ -1,50 +1,49 @@
-# Demo video script (2:50, hard limit 3:00)
+# Demo video script (about 2:30, hard limit 3:00)
 
-**Goal of the video:** in three minutes show that PayPal moves the money, AI only reads the paperwork, and fair rules (signed in advance, with a deposit, a returned-goods check, a cooling-off and an appeal) decide every outcome.
+**Goal:** show the project working end to end, with the fault split as the long scene. PayPal moves the money, AI only reads paperwork, and fair rules signed in advance decide every outcome. The rules score Presentation on "working end-to-end", so the video starts at a new order and ends at a settled one.
 
 ## Before you record
-- **Window:** 1080p, light theme, browser zoom 110%, one clean tab. Mic close. Fake data only.
-- **Servers:** open the API health link a minute before so the free server is awake. Sandbox PayPal keys set (`PAYPAL_MODE=sandbox`).
-- **Accounts (all verified, connected by id):** buyer (Nordic Home Imports), seller (Kaveri Exports), admin, and a **second admin** (list both in `ADMIN_EMAIL`, comma separated). Every account has a PayPal sandbox email.
-- **PayPal:** log into the US sandbox **buyer** account in this browser first, so each approval is one click on **Pay**. Seller deposit is also paid with the sandbox buyer account (it is only a stand-in).
-- **Two orders, recorded in this order** (the duplicate-file check flags one file reused in two *open* orders, so finish or leave deals as described):
-  - **Order A (happy path and the flag):** record live in the video.
-  - **Order B (the dispute):** prepare it before recording, up to "buyer disputed, return receipt uploaded, seller confirmed the returned goods". Use documents with a different `Date:` line from Order A's, so nothing is flagged as a duplicate. You will show only the admin ruling, appeal and result.
-- **Files ready:** `sample_docs/pdf/order_confirmation.pdf`, `bill_of_lading_wrong_quantity.pdf`, `bill_of_lading_ok.pdf`.
-- Set `COOLING_OFF_HOURS=48` (default). You never wait: the appeal stops the timer and the second reviewer decides at once.
+- **Window:** 1080p, light theme, browser zoom 110%, one clean tab. Fake data only. Record the screen with no sound, then add the narration (a human or an AI voice; say "narration is AI-generated" in the YouTube description if it is).
+- **Servers:** open the API health link a minute before so the free server is awake. `PAYPAL_MODE=sandbox`.
+- **Accounts (all verified, connected):** buyer (Nordic Home Imports), seller (Kaveri Exports), admin, and a second admin (`reviewer2@escrowpilot.demo`).
+- **PayPal:** log into the US sandbox buyer account in this browser first, so each approval is one click on **Pay**.
+- **Two orders** (the duplicate-file check flags the same file used in two open orders, so keep their documents different):
+  - **Order A (live in the video, scenes 2 to 4):** a fresh 3-stage order with `sample_docs/pdf/order_confirmation.pdf` and the wrong-quantity bill of lading.
+  - **Order B (pre-built, scenes 5 to 7):** one stage, `All on delivery`, 10,000 USD, 5% deposit. Prepare it up to "buyer disputed, return receipt uploaded, seller confirmed the returned goods". Use `sample_docs/orderB/delivery_receipt_B.pdf` and `return_receipt_B.pdf` (new document numbers and dates). A one-stage order means the deposit returns right after the ruling.
+- **Do not reuse a deal whose audit shows "Chain broken".** Always start Order A and B fresh.
 
 ## The money rules (know these cold)
-- Buyer pays each stage into escrow (or the full price). The seller pays a refundable **5% security deposit** first. Both are held by the platform's PayPal account in the demo; in production a licensed partner holds them.
-- Good order: the seller is paid minus a **2% fee**, and the deposit comes back in full. The buyer pays no fee.
-- **Seller at fault:** buyer gets a full refund plus 2% of the order, paid from the seller's deposit; the platform keeps 3%.
-- **Buyer at fault, goods returned:** buyer is refunded minus 5% of that stage. The seller gets 2%, the platform 3%, and the deposit returns. If the buyer keeps the goods, the seller is paid in full.
-- **No refund before the seller checks the returned goods.** After the return proof is accepted, the seller has 5 days (signed term) to confirm the goods match what was shipped or report a mismatch. No answer counts as confirmed. A reported mismatch goes to a reviewer and the refund waits; if it stands and the buyer is at fault, the seller is paid in full.
-- A **reviewer** names who was at fault. The AI only summarizes facts and never recommends. A ruling waits **48 hours**; either side can **appeal once**; a **different reviewer** decides and that is final.
+- The buyer pays each stage into escrow. The seller pays a refundable **5% security deposit** first. In the demo the platform's PayPal account holds both; in production a licensed partner does.
+- Good order: the seller is paid minus a **2% fee**, the deposit comes back, the buyer pays no fee.
+- **Seller at fault:** buyer fully refunded plus 2% of the order from the seller's deposit; the platform keeps 3%. With whole-order scope, every funded stage goes back to the buyer as one combined refund.
+- **Buyer at fault, goods returned:** buyer refunded minus 5% of that stage; seller gets 2%, platform 3%, deposit returns. With whole-order scope, delivered stages are paid and funded, undelivered stages go back in full.
+- **No refund before the seller checks the returned goods** (5 days, no answer counts as confirmed).
+- The reviewer chooses **Refund this stage** or **Full return, whole order** (default: what both signed; a change is logged). The reviewer names the fault, the ruling waits **48 hours**, one **appeal** goes to a different reviewer and that decision is final.
 
-## Shot list
+## Shot list (Order B for the $10,000 example: buyer $9,500 back, seller $200, platform $300)
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | Landing page: headline, live-looking order card, login card | "Thirty years of handshakes built this exporter's business. Then one big order went wrong and there was nothing to point to. Trust is great. Terms are better." |
-| 0:12 | New order: the builder, plan bar, then the plain-language "What you are both agreeing to" list. Both sign. | "A buyer anywhere and a seller connect by id. They agree milestones and exactly what happens if it goes wrong, in plain words, and both sign the same version. Change a word and the signatures are voided." |
-| 0:32 | Seller pays the 5% deposit: the bottom sheet, then PayPal's page, **Pay**, success animation | "The seller puts down a five percent deposit first. Until it is held, the buyer cannot fund. Both sides have something to lose." |
-| 0:47 | Buyer funds stage 1 the same way: sheet, PayPal, **Pay**, "Stage 1 funded", the plan bar fills | "The buyer pays one stage at a time, just before it starts. PayPal's Orders API collects it. In this demo the platform's PayPal account holds it; in production a licensed partner does." |
-| 1:02 | Seller uploads `order_confirmation.pdf`: "Verified against the signed terms" toast | "Gemini reads the paperwork and extracts fields. Plain code compares them to what both signed. It matches, so the stage is verified." |
-| 1:14 | Seller uploads `bill_of_lading_wrong_quantity.pdf`: flagged with the exact reason. Linger. | "Eight hundred units, not a thousand. Nothing moves. It goes to review with the exact reason. The AI reads. It never decides who gets paid. Documents are also cross-checked against earlier stages, and a reused file is flagged." |
-| 1:30 | Switch to **Order B**, admin queue: click **AI evidence summary** | "Here is a dispute. The buyer says the slabs arrived cracked and sent them back with a return receipt. The reviewer gets a summary of facts only. It never says who is at fault." |
-| 1:45 | Show the seller's **returned goods check** (already confirmed), then admin clicks **Seller at fault**: the "takes effect in 48 hours, either side can appeal" banner | "The seller has already confirmed the returned goods are the same ones, because no refund moves before that check. The reviewer rules the seller at fault, but nothing moves for 48 hours, so either side can appeal." |
-| 2:00 | Seller view: types an appeal reason, **Appeal once** | "The seller says the damage happened in transit and appeals, once." |
-| 2:10 | Log in as the **second reviewer**: queue shows "Appealed", **Buyer at fault**. The deal screen updates: refunded, released, "Deposit returned". | "A different reviewer must decide, and that decision is final. They overturn it. The buyer is refunded minus five percent of that stage, the seller keeps two percent of it, the platform three, and the seller's deposit comes straight back. Every number was signed in advance." |
-| 2:35 | Audit trail: **Show**, "Chain intact" | "Every step is in a tamper-evident log, and every payout has an idempotency key, so nothing is paid twice." |
-| 2:44 | Closing card | "EscrowPilot: PayPal moves the money, Gemini reads the paperwork, fair rules decide. Sandbox today. Next, a licensed partner for live funds. Keep the relationship, protect the money." |
+| 0:00 | Landing page | "A big export order went wrong and there was nothing to point to. Trust is great. Terms are better." |
+| 0:10 | New order (Order A): the plain-language "What you are both agreeing to" list, both sign | "Buyer and seller agree milestones and exactly what happens if it goes wrong, and both sign the same version. Change a word and the signatures are voided." |
+| 0:25 | Seller deposit or the first stage payment: bottom sheet, PayPal page, **Pay**, success animation | "PayPal moves the money. The seller puts down a five percent deposit first, so both sides have something to lose." |
+| 0:40 | Seller uploads `order_confirmation.pdf`, then the wrong-quantity bill of lading is flagged with the exact reason | "Gemini reads the paperwork. Plain code compares it to what both signed. Eight hundred, not a thousand: nothing moves. The AI reads. It never decides who gets paid." |
+| 1:00 | Switch to Order B in the admin queue. **AI evidence summary** | "Here is a dispute. The goods came back. The reviewer gets facts only, never a verdict." |
+| 1:10 | Show the scope switch (**Refund this stage** or **Full return, whole order**), tap **Seller at fault**, show the 48-hour banner | "The reviewer picks how far the ruling goes, and names the fault. Nothing moves for 48 hours." |
+| 1:25 | Seller view: type a reason, **Appeal once** | "The seller appeals, once." |
+| 1:35 | Second reviewer: **Buyer at fault** | "A different reviewer decides, and that is final. They overturn it." |
+| 1:45 | Deal screen, then the **Money** tab (PayPal refund and payout in the log, platform earned, "Deposit returned") | "The buyer is refunded minus five percent. The seller keeps two. The platform three. The deposit comes straight back. Every number was signed in advance." |
+| 2:15 | Audit trail **Show**, "Chain intact" | "Every step is in a tamper-evident log, and every payout has an idempotency key, so nothing is paid twice." |
+| 2:25 | Closing card | "EscrowPilot: PayPal moves the money, Gemini reads the paperwork, fair rules decide. Sandbox today. Next, a licensed partner for live funds." |
 
 ## If something goes wrong on camera
-- **PayPal page slow:** cut the wait in editing. Never wait live.
-- **A document is flagged unexpectedly:** it is a duplicate (the same file used in another open order). Use a copy with a different `Date:` line or set `DUPLICATE_DOC_CHECK=false` for the recording.
-- **Gemini error:** the offline reader takes over for text files, so keep a text copy of each document handy.
+- **PayPal page slow:** cut the wait in editing.
+- **A document is flagged unexpectedly:** it is a duplicate. Use a copy with a different `Date:` line or set `DUPLICATE_DOC_CHECK=false` for the recording.
+- **Gemini error:** the offline reader takes over for text files; keep text copies handy.
+- **A red error or a double ruling:** the buttons now lock while a ruling is sent; if it still happens, cut and retake from a fresh order.
 
 ## Say plainly (judges respect honesty)
 - PayPal is **sandbox** and the documents are fake.
-- In production a licensed partner holds the money; the platform never holds customer funds itself. Payment partners also charge their own fees on top of our 2%.
+- In production a licensed partner holds the money; payment partners also charge their own fees on top of our 2%.
 - AI never decides. It reads documents and writes a neutral summary; people name the fault and code applies the numbers.
-- The video does not show the buyer-keeps-goods case (seller is paid in full), the seller's mismatch report, or the 48-hour wait; mention these in the Devpost text.
+- The video does not show the buyer-keeps-goods case, the seller's mismatch report, or the 48-hour wait; mention these in the Devpost text.
