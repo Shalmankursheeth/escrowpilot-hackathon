@@ -165,7 +165,8 @@ function QueueItem({ q, review, go, reload, working }) {
   const [busy, setBusy] = useState(false);
   const m = q.milestone;
   const waiting = m.ruling && m.ruling_due_at && !m.appealed;
-  const lock = waiting || working;
+  const returnPending = m.return_proof_ok && m.return_received === null;
+  const lock = waiting || working || returnPending;
   const [scope, setScope] = useState(q.scope);
   const load = async () => { setBusy(true); try { setBrief(await api(`/admin/deals/${q.deal_id}/milestones/${m.id}/brief`)); } finally { setBusy(false); } };
   const checkReturn = async (ok) => {
@@ -193,6 +194,7 @@ function QueueItem({ q, review, go, reload, working }) {
           {scope === "stage" ? "A ruling settles only this stage; the other stages carry on."
             : q.other_locked_cents > 0 ? `A ruling also ends the order: ${money(q.other_locked_cents)} still locked in other stages is settled with it. Seller at fault: all of it goes back to the buyer. Buyer at fault with the goods returned: all of it is refunded minus 5% (seller 2%, platform 3%).`
             : "A ruling ends the order. No other stage has money locked."}</span></div>
+        {returnPending && <div className="fact wait"><i /><span><b>Waiting for the seller to check the returned goods.</b> A ruling is possible once the seller confirms, or after the check period ends with no answer.</span></div>}
         {waiting && <div className="fact wait"><i /><span><b>Ruling: {m.ruling} at fault.</b> Takes effect {new Date(m.ruling_due_at + "Z").toLocaleString()} unless appealed.</span></div>}
         {m.appealed && <div className="fact wait"><i /><span><b>Appealed:</b> {m.appeal_reason}. A different reviewer must decide; that is final.</span></div>}
       </div>
