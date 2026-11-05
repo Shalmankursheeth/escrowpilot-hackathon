@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 340" width="1000" height="340" role="img" aria-label="EscrowPilot: milestone escrow with PayPal and Gemini">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#16203a"/>
+    </linearGradient>
+    <linearGradient id="ac" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <style>
+      .t{font-family:Segoe UI,Helvetica,Arial,sans-serif}
+      .title{font-size:54px;font-weight:800;fill:#fff;letter-spacing:1px}
+      .sub{font-size:20px;fill:#9fb3d9}
+      .node{fill:#111b33;stroke:#2c3f6b;stroke-width:2}
+      .lbl{font-size:16px;font-weight:700;fill:#e6eefc;text-anchor:middle}
+      .sm{font-size:12px;fill:#8aa0c8;text-anchor:middle}
+      .line{stroke:#2c3f6b;stroke-width:3;stroke-dasharray:6 8;animation:dash 1.2s linear infinite}
+      @keyframes dash{to{stroke-dashoffset:-28}}
+      .coin{fill:#fbbf24;animation:move 6s ease-in-out infinite}
+      @keyframes move{0%{transform:translateX(0);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateX(660px);opacity:0}}
+      .pulse{animation:pulse 3s ease-in-out infinite;transform-origin:center;transform-box:fill-box}
+      .p2{animation-delay:.6s}.p3{animation-delay:1.2s}.p4{animation-delay:1.8s}.p5{animation-delay:2.4s}
+      @keyframes pulse{0%,100%{stroke:#2c3f6b}50%{stroke:#22d3ee}}
+      .fade{animation:fade 1.4s ease-out both}
+      @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+      .glow{animation:glow 4s ease-in-out infinite}
+      @keyframes glow{0%,100%{opacity:.25}50%{opacity:.5}}
+    </style>
+  </defs>
+  <rect width="1000" height="340" rx="18" fill="url(#bg)"/>
+  <circle class="glow" cx="880" cy="40" r="140" fill="#3b82f6" opacity=".3"/>
+  <circle class="glow" cx="90" cy="320" r="120" fill="#22d3ee" opacity=".2"/>
+
+  <text class="t title fade" x="50" y="85">EscrowPilot</text>
+  <rect x="52" y="98" width="190" height="5" rx="2.5" fill="url(#ac)"/>
+  <text class="t sub fade" x="50" y="135" style="animation-delay:.3s">Milestone escrow for importers and exporters.</text>
+  <text class="t sub fade" x="50" y="162" style="animation-delay:.6s">PayPal moves the money. Gemini reads the paperwork. Fair rules decide.</text>
+
+  <!-- flow -->
+  <g transform="translate(0,0)">
+    <line class="line" x1="130" y1="260" x2="870" y2="260"/>
+    <g class="t">
+      <rect class="node pulse" x="60" y="225" width="140" height="70" rx="14"/>
+      <text class="lbl" x="130" y="255">Buyer</text><text class="sm" x="130" y="275">signs the terms</text>
+
+      <rect class="node pulse p2" x="240" y="225" width="140" height="70" rx="14"/>
+      <text class="lbl" x="310" y="255">PayPal</text><text class="sm" x="310" y="275">escrow per stage</text>
+
+      <rect class="node pulse p3" x="420" y="225" width="140" height="70" rx="14"/>
+      <text class="lbl" x="490" y="255">Gemini</text><text class="sm" x="490" y="275">reads documents</text>
+
+      <rect class="node pulse p4" x="600" y="225" width="140" height="70" rx="14"/>
+      <text class="lbl" x="670" y="255">Rules engine</text><text class="sm" x="670" y="275">decides, not AI</text>
+
+      <rect class="node pulse p5" x="780" y="225" width="140" height="70" rx="14"/>
+      <text class="lbl" x="850" y="255">Seller</text><text class="sm" x="850" y="275">paid on proof</text>
+    </g>
+    <circle class="coin" cx="130" cy="260" r="9"/>
+  </g>
+  <text class="t sm" x="940" y="325" style="text-anchor:end">Sandbox demo. Test money only.</text>
+</svg>

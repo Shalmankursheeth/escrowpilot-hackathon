@@ -13,7 +13,7 @@ EscrowPilot is milestone escrow for importers and exporters.
 The seller also pays a refundable 5% security deposit. If the seller is ruled at fault, the buyer gets a full refund plus 2% and we keep 3% of the deposit. If the buyer is at fault, they lose 5% (2% to the seller, 3% to us). Fairness by design: a fault ruling waits 48 hours, either side can appeal once to a different reviewer, documents are cross-checked against earlier stages, a reused file is flagged, and the reviewer sees a facts-only AI summary that never recommends a verdict. Revenue: a 2% fee on each released milestone.
 
 ## How we built it
-FastAPI and SQLAlchemy backend, React frontend, PostgreSQL in production (SQLite locally). PayPal Orders and Payouts APIs in sandbox, behind a small funds-holder interface so a licensed partner can replace it. Gemini (free tier) extracts document fields as JSON; the document is treated as untrusted text and the model has no tools. A deterministic rules engine owns every payment decision. 20 automated tests cover the full flow, mismatches, disputes, refunds, idempotency, permissions and uploads.
+FastAPI and SQLAlchemy backend, React frontend, PostgreSQL in production (SQLite locally). PayPal Orders and Payouts APIs in sandbox, behind a small funds-holder interface so a licensed partner can replace it. Gemini (free tier) extracts document fields as JSON; the document is treated as untrusted text and the model has no tools. A deterministic rules engine owns every payment decision. 60 automated tests cover the full flow, mismatches, disputes, refunds, idempotency, permissions and uploads.
 
 ## Challenges we ran into
 Deciding where AI belongs. Letting a model approve payments is a security hole, so it only extracts facts and code decides. PayPal authorisation holds expire after 29 days, so we capture up front and pay out per milestone. Designing failure terms that are signed in advance without becoming a legal contract engine.
@@ -30,17 +30,24 @@ Pilots with real exporters, first in shadow mode (their orders, documents and te
 ## Built with
 python, fastapi, sqlalchemy, postgresql, react, vite, paypal, paypal-payouts, gemini, google-gemini, pypdf, jwt, vercel, render
 
+## Important: what is real and what is not
+Everything runs on PayPal **sandbox**. No real money moves. All sample documents are **fake**. The video narration is AI-generated. The repository was created on Oct 30, after the Oct 1 start of the hackathon period.
+
 ## Try it out links
-- Live demo: [Vercel URL]
-- Code: [GitHub URL]
-- Demo accounts and sample PDFs: see README
+- Video: https://youtu.be/W4YZG8KVnHg
+- Live demo: https://escrowpilot-app.vercel.app
+- Code: https://github.com/Shalmankursheeth/escrowpilot-hackathon
+- Sample PDFs: `sample_docs/` in the repo (fake documents)
+
+## Testing instructions (paste into the Devpost testing field)
+Open the live demo (the free server may take about 30 seconds to wake on the first request; open https://escrowpilot-api.onrender.com/health first). Log in as the buyer, buyer@escrowpilot.demo, and as the seller, seller@escrowpilot.demo, in two separate browsers (the password is [ADD PASSWORD HERE]). Create an order, sign it as both, pay the seller deposit and a stage with the PayPal sandbox payer, then upload the sample PDFs from `sample_docs/` as the seller. Everything is sandbox and the documents are fake.
 
 ## Before you submit (checklist)
 - [ ] `live_smoke.py` passes for Gemini and PayPal sandbox with your keys
 - [ ] Render API and Vercel frontend deployed, health link works, CORS set
 - [ ] Demo accounts created and verified; sample PDFs tested on the live site
 - [ ] Repo is public with MIT licence and no secrets (check `.env` is not committed)
-- [ ] Video under the Devpost length limit, uploaded to YouTube as public or unlisted
+- [x] Video 2:20, uploaded to YouTube (confirm Public)
 - [ ] Devpost tags: remove claude and anthropic, add gemini and google-gemini
 - [ ] Say in the story that PayPal is sandbox and documents are fake
-- [ ] Submit on Nov 11; the deadline is Nov 12, 12:00 pm Pacific (about 12:30 am IST on Nov 13)
+- [ ] Submit on Nov 11; the deadline is Nov 12, 12:00 pm Pacific (1:30 am IST on Nov 13)
