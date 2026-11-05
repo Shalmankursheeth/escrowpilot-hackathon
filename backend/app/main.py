@@ -59,7 +59,7 @@ async def business_error_handler(_request: Request, exc: BusinessError):
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     s = get_settings()
     return {"ok": True, "payments": get_holder().name, "ai": s.ai_provider, "note": "sandbox demo, test money only"}
